@@ -1,9 +1,19 @@
 # PRISM AUTO
 
-Flutter project for PRISM AUTO — the self-serve AI repurposing module —
-built from `PRISM_AUTO_Product_and_Frontend_Spec.docx`. Screens only, mock
-data only, no API calls, per Section 5 of the spec. A separate API contract
-will follow once these screens are reviewed.
+Flutter project for PRISM AUTO — the self-serve AI repurposing module.
+
+**Status (per `PRISM_AUTO_FINAL_MASTER_SPEC (1).docx`, which replaces the
+original spec): the backend is live at
+`https://prism-production-a1be.up.railway.app`, and Screen 2 (Processing)
+is wired to it for real** — `GET /beam/uploads/:id/status`, polled every
+~4s via `lib/core/network/api_client.dart` → `LiveAutoRepository`. Every
+other screen still runs on mock data; they get wired one at a time
+following the spec's own build order: Upload → **Processing (done)** →
+Library → Results → Captions & Posts → Editor → Export → Plans & Billing.
+No auth is wired in server-side yet (every request trusts whatever
+`userId` it's sent) — `ApiClient.authTokenProvider` is the hook to drop a
+real token in later without touching call sites, per the spec's "one
+honest gap."
 
 ## What's here
 

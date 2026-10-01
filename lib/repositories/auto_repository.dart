@@ -3,23 +3,41 @@ import '../models/upload_model.dart';
 import '../models/clip_model.dart';
 import '../models/caption_post_model.dart';
 import '../models/plan_model.dart';
+import '../models/processing_status_model.dart';
 import '../core/mock/auto_mock_data.dart';
 
+/// UI-facing processing step, used by ProgressStepList (Screen 2). Kept
+/// separate from BackendUploadStatus (the raw API enum) — the bloc maps
+/// one to the other, since 'queued' has no visual step yet and
+/// 'completed'/'failed' are handled as their own states, not steps.
 enum ProcessingStepName { transcribing, findingMoments, cuttingClips, writingPosts }
 
-class ProcessingStep {
-  final ProcessingStepName step;
-  final bool complete;
-  final int etaSeconds;
-  const ProcessingStep({required this.step, required this.complete, required this.etaSeconds});
-}
-
-/// Abstract data source for PRISM AUTO. A real implementation will call
-/// the API contract issued separately after these screens are reviewed.
+/// Abstract data source for PRISM AUTO. Screen 2 (Processing) now calls
+/// the real backend via fetchProcessingStatus/pollProcessingStatus
+/// (Section 4 of the Final Master Spec v2, GET /beam/uploads/:id/status).
+/// Every other method here is still mock-backed — they get wired to their
+/// real endpoints one screen at a time, per the spec's own build order.
 abstract class AutoRepository {
   Future<UploadModel> startUpload(String filename, int durationSeconds);
   Stream<double> uploadProgress();
-  Stream<ProcessingStep> processingSteps(String uploadId);
+
+  /// Real call: GET /beam/uploads/:id/status.
+  Future<ProcessingStatusResult> fetchProcessingStatus(String uploadId);
+
+  /// Polls [fetchProcessingStatus] every ~4s until the backend reports
+  /// completed or failed. Shared by every implementation — only the
+  /// single fetch above needs overriding.
+  Stream<ProcessingStatusResult> pollProcessingStatus(String uploadId) async* {
+    while (true) {
+      final result = await fetchProcessingStatus(uploadId);
+      yield result;
+      if (result.status == BackendUploadStatus.completed || result.status == BackendUploadStatus.failed) {
+        break;
+      }
+      await Future.delayed(const Duration(seconds: 4));
+    }
+  }
+
   Future<List<ClipModel>> getClips(String uploadId);
   Future<List<CaptionPostModel>> getPosts(String uploadId);
   Future<List<UploadModel>> getLibrary();
@@ -31,9 +49,11 @@ abstract class AutoRepository {
   int minutesLimit();
 }
 
-/// Mock implementation — simulated latency, in-memory data from
-/// AutoMockData. This is what every screen builds against this pass.
+/// Mock implementation — every method simulated in-memory. Still the
+/// default for every screen except Processing (see LiveAutoRepository).
 class MockAutoRepository implements AutoRepository {
+  final Map<String, DateTime> _pollStart = {};
+
   @override
   Future<UploadModel> startUpload(String filename, int durationSeconds) async {
     await Future.delayed(const Duration(milliseconds: 400));
@@ -56,15 +76,27 @@ class MockAutoRepository implements AutoRepository {
   }
 
   @override
-  Stream<ProcessingStep> processingSteps(String uploadId) async* {
-    final steps = ProcessingStepName.values;
-    for (int i = 0; i < steps.length; i++) {
-      await Future.delayed(const Duration(milliseconds: 900));
-      yield ProcessingStep(
-        step: steps[i],
-        complete: true,
-        etaSeconds: (steps.length - i - 1) * 3,
-      );
+  Future<ProcessingStatusResult> fetchProcessingStatus(String uploadId) async {
+    await Future.delayed(const Duration(milliseconds: 300));
+    final start = _pollStart.putIfAbsent(uploadId, () => DateTime.now());
+    final elapsed = DateTime.now().difference(start).inSeconds;
+    if (elapsed < 2) return const ProcessingStatusResult(status: BackendUploadStatus.queued);
+    if (elapsed < 6) return const ProcessingStatusResult(status: BackendUploadStatus.transcribing);
+    if (elapsed < 10) return const ProcessingStatusResult(status: BackendUploadStatus.findingMoments);
+    if (elapsed < 14) return const ProcessingStatusResult(status: BackendUploadStatus.cuttingClips);
+    if (elapsed < 18) return const ProcessingStatusResult(status: BackendUploadStatus.writingPosts);
+    return const ProcessingStatusResult(status: BackendUploadStatus.completed);
+  }
+
+  @override
+  Stream<ProcessingStatusResult> pollProcessingStatus(String uploadId) async* {
+    while (true) {
+      final result = await fetchProcessingStatus(uploadId);
+      yield result;
+      if (result.status == BackendUploadStatus.completed || result.status == BackendUploadStatus.failed) {
+        break;
+      }
+      await Future.delayed(const Duration(seconds: 1));
     }
   }
 

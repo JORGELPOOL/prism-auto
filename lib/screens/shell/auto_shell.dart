@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../blocs/processing/processing_bloc.dart';
+import '../../blocs/processing/processing_state.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../widgets/common/prism_sidebar.dart';
+import '../processing/processing_screen.dart';
 import '../upload/upload_screen.dart';
 import '../library/library_screen.dart';
 import '../billing/plans_billing_screen.dart';
@@ -10,7 +14,11 @@ import '../billing/plans_billing_screen.dart';
 /// AutoShell mirrors AdminShell's exact structure: sidebar on desktop,
 /// bottom nav on mobile, switching at AppSpacing.mobileBreakpoint via
 /// LayoutBuilder. Nav items are PRISM AUTO's own: Upload, Library, Billing.
-/// Library is home base for returning users (Screen 7).
+///
+/// Also hosts the "safe to navigate away" persistent indicator the spec
+/// calls for on Screen 2: a Cyan dot + "PROCESSING" while the app-level
+/// ProcessingBloc has an upload in flight, tappable to jump back to that
+/// screen; otherwise a plain "READY" dot.
 class AutoShell extends StatefulWidget {
   const AutoShell({super.key});
 
@@ -33,6 +41,36 @@ class _AutoShellState extends State<AutoShell> {
     PlansBillingScreen(),
   ];
 
+  Widget _statusChip(BuildContext context) {
+    return BlocBuilder<ProcessingBloc, ProcessingState>(
+      builder: (context, state) {
+        if (state is ProcessingInProgress) {
+          return InkWell(
+            onTap: () => Navigator.of(context).push(MaterialPageRoute(
+              builder: (_) => ProcessingScreen(uploadId: state.uploadId),
+            )),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(width: 6, height: 6, decoration: const BoxDecoration(color: AppColors.cyan, shape: BoxShape.circle)),
+                const SizedBox(width: 8),
+                Text('PROCESSING', style: AppTextStyles.dataLabel.copyWith(color: AppColors.cyan)),
+              ],
+            ),
+          );
+        }
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(width: 6, height: 6, decoration: const BoxDecoration(color: AppColors.mint, shape: BoxShape.circle)),
+            const SizedBox(width: 8),
+            Text('READY', style: AppTextStyles.dataLabel),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
@@ -43,7 +81,22 @@ class _AutoShellState extends State<AutoShell> {
           return Scaffold(
             backgroundColor: AppColors.bgPrimary,
             body: SafeArea(
-              child: IndexedStack(index: _selectedIndex, children: _screens),
+              child: Column(
+                children: [
+                  BlocBuilder<ProcessingBloc, ProcessingState>(
+                    builder: (context, state) {
+                      if (state is! ProcessingInProgress) return const SizedBox.shrink();
+                      return Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        color: AppColors.bgSurface,
+                        child: _statusChip(context),
+                      );
+                    },
+                  ),
+                  Expanded(child: IndexedStack(index: _selectedIndex, children: _screens)),
+                ],
+              ),
             ),
             bottomNavigationBar: PrismBottomNav(
               items: _items,
@@ -61,21 +114,9 @@ class _AutoShellState extends State<AutoShell> {
                 items: _items,
                 selectedIndex: _selectedIndex,
                 onSelect: (i) => setState(() => _selectedIndex = i),
-                footer: Row(
-                  children: [
-                    Container(
-                      width: 6,
-                      height: 6,
-                      decoration: const BoxDecoration(color: AppColors.cyan, shape: BoxShape.circle),
-                    ),
-                    const SizedBox(width: 8),
-                    Text('READY', style: AppTextStyles.dataLabel),
-                  ],
-                ),
+                footer: _statusChip(context),
               ),
-              Expanded(
-                child: IndexedStack(index: _selectedIndex, children: _screens),
-              ),
+              Expanded(child: IndexedStack(index: _selectedIndex, children: _screens)),
             ],
           ),
         );
