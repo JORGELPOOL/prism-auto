@@ -23,7 +23,8 @@ class LibraryScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (context) => LibraryBloc(context.read<AutoRepository>())..add(const LoadLibrary()),
+      create: (context) =>
+          LibraryBloc(context.read<AutoRepository>())..add(const LoadLibrary()),
       child: const _LibraryView(),
     );
   }
@@ -33,7 +34,8 @@ class _LibraryView extends StatelessWidget {
   const _LibraryView();
 
   void _openUpload(BuildContext context) {
-    Navigator.of(context).push(MaterialPageRoute(builder: (_) => const Scaffold(body: UploadScreen())));
+    Navigator.of(context).push(MaterialPageRoute(
+        builder: (_) => const Scaffold(body: UploadScreen())));
   }
 
   @override
@@ -50,16 +52,26 @@ class _LibraryView extends StatelessWidget {
             runSpacing: 12,
             children: [
               Text('Your Library', style: AppTextStyles.pageTitle),
-              Row(
-                mainAxisSize: MainAxisSize.min,
+              Wrap(
+                spacing: 12,
+                runSpacing: 8,
+                crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
                     color: AppColors.bgSurface,
-                    child: Text('${repo.minutesUsed()} / ${repo.minutesLimit()} MIN LEFT THIS MONTH', style: AppTextStyles.dataTag),
+                    child: Text(
+                      '${repo.minutesUsed()} / ${repo.minutesLimit()} MIN LEFT THIS MONTH',
+                      style: AppTextStyles.dataTag,
+                    ),
                   ),
-                  const SizedBox(width: 16),
-                  PrismButton(label: 'New Upload', onPressed: () => _openUpload(context)),
+                  PrismButton(
+                    label: 'New Upload',
+                    onPressed: () => _openUpload(context),
+                  ),
                 ],
               ),
             ],
@@ -72,7 +84,10 @@ class _LibraryView extends StatelessWidget {
                   return const Center(child: PrismLoader());
                 }
                 if (state is LibraryError) {
-                  return Center(child: Text(state.message, style: AppTextStyles.bodyM.copyWith(color: AppColors.error)));
+                  return Center(
+                      child: Text(state.message,
+                          style: AppTextStyles.bodyM
+                              .copyWith(color: AppColors.error)));
                 }
                 final uploads = (state as LibraryLoaded).uploads;
                 if (uploads.isEmpty) {
@@ -80,18 +95,24 @@ class _LibraryView extends StatelessWidget {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.video_library_outlined, size: 40, color: AppColors.textDim),
+                        const Icon(Icons.video_library_outlined,
+                            size: 40, color: AppColors.textDim),
                         const SizedBox(height: 16),
-                        Text('No uploads yet', style: AppTextStyles.sectionHead),
+                        Text('No uploads yet',
+                            style: AppTextStyles.sectionHead),
                         const SizedBox(height: 20),
-                        PrismButton(label: 'Upload your first video', onPressed: () => _openUpload(context)),
+                        PrismButton(
+                            label: 'Upload your first video',
+                            onPressed: () => _openUpload(context)),
                       ],
                     ),
                   );
                 }
                 return LayoutBuilder(
                   builder: (context, constraints) {
-                    final columns = constraints.maxWidth > 900 ? 3 : (constraints.maxWidth > 560 ? 2 : 1);
+                    final columns = constraints.maxWidth > 900
+                        ? 3
+                        : (constraints.maxWidth > 560 ? 2 : 1);
                     return GridView.builder(
                       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: columns,
@@ -104,30 +125,42 @@ class _LibraryView extends StatelessWidget {
                         final upload = uploads[i];
                         return PrismCard(
                           onTap: upload.status == UploadStatus.ready
-                              ? () => Navigator.of(context)
-                                  .push(MaterialPageRoute(builder: (_) => ResultsScreen(uploadId: upload.id)))
+                              ? () => Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                      builder: (_) =>
+                                          ResultsScreen(uploadId: upload.id)))
                               : null,
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Container(height: 90, width: double.infinity, color: AppColors.bgSurface),
+                              Container(
+                                  height: 90,
+                                  width: double.infinity,
+                                  color: AppColors.bgSurface),
                               const SizedBox(height: 12),
                               Text(
                                 upload.filename,
-                                style: AppTextStyles.bodyM.copyWith(color: AppColors.textWhite),
+                                style: AppTextStyles.bodyM
+                                    .copyWith(color: AppColors.textWhite),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
                               const SizedBox(height: 6),
                               Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
-                                  Text('${upload.uploadedAt.month}/${upload.uploadedAt.day}', style: AppTextStyles.dataLabel),
+                                  Text(
+                                      '${upload.uploadedAt.month}/${upload.uploadedAt.day}',
+                                      style: AppTextStyles.dataLabel),
                                   if (upload.status == UploadStatus.processing)
-                                    const PrismBadge(label: 'Pending', status: PrismBadgeStatus.pending)
+                                    const PrismBadge(
+                                        label: 'Pending',
+                                        status: PrismBadgeStatus.pending)
                                   else
-                                    Text('${upload.clipCount} clips', style: AppTextStyles.dataTag),
+                                    Text('${upload.clipCount} clips',
+                                        style: AppTextStyles.dataTag),
                                 ],
                               ),
                             ],
