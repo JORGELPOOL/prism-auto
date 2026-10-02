@@ -7,7 +7,8 @@ import 'package:http/http.dart' as http;
 /// [authTokenProvider] is the hook for adding a Supabase bearer token
 /// later without touching any repository or screen code.
 class ApiClient {
-  static const String baseUrl = 'https://prism-production-a1be.up.railway.app';
+  static const String baseUrl =
+      'https://prism-production-a1be.up.railway.app/api';
 
   /// Set this once real auth exists, e.g.
   /// `ApiClient.authTokenProvider = () => supabase.auth.currentSession?.accessToken;`
@@ -30,18 +31,23 @@ class ApiClient {
 
   Future<dynamic> post(String path, {Map<String, dynamic>? body}) async {
     final uri = Uri.parse('$baseUrl$path');
-    return _decode(await _http.post(uri, headers: _headers, body: body == null ? null : jsonEncode(body)));
+    return _decode(await _http.post(uri,
+        headers: _headers, body: body == null ? null : jsonEncode(body)));
   }
 
   Future<dynamic> patch(String path, {Map<String, dynamic>? body}) async {
     final uri = Uri.parse('$baseUrl$path');
-    return _decode(await _http.patch(uri, headers: _headers, body: body == null ? null : jsonEncode(body)));
+    return _decode(await _http.patch(uri,
+        headers: _headers, body: body == null ? null : jsonEncode(body)));
   }
 
-  Future<dynamic> put(Uri uri, {required List<int> bytes, required String contentType}) async {
-    final response = await _http.put(uri, headers: {'Content-Type': contentType}, body: bytes);
+  Future<dynamic> put(Uri uri,
+      {required List<int> bytes, required String contentType}) async {
+    final response = await _http.put(uri,
+        headers: {'Content-Type': contentType}, body: bytes);
     if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw ApiException('Upload failed (${response.statusCode})', statusCode: response.statusCode);
+      throw ApiException('Upload failed (${response.statusCode})',
+          statusCode: response.statusCode);
     }
   }
 
@@ -53,7 +59,8 @@ class ApiClient {
     String message = 'Request failed (${response.statusCode})';
     try {
       final decoded = jsonDecode(response.body);
-      if (decoded is Map && decoded['error'] != null) message = decoded['error'].toString();
+      if (decoded is Map && decoded['error'] != null)
+        message = decoded['error'].toString();
     } catch (_) {
       // Non-JSON error body — keep the generic message.
     }
